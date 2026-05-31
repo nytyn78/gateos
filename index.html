@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d0f12">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>GateOS</title>
+<link rel="manifest" href='data:application/manifest+json,{"name":"GateOS","short_name":"GateOS","start_url":".","scope":".","display":"standalone","background_color":"%230d0f12","theme_color":"%230d0f12"}'>
+<style>
+  :root{
+    --bg:#0d0f12; --panel:#15191f; --panel2:#1c222b; --line:#2a323d;
+    --txt:#e7ecf2; --muted:#8a96a6; --amber:#ffb02e; --green:#2ec27e;
+    --red:#e5484d; --blue:#4493f8; --radius:14px;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{background:var(--bg);color:var(--txt);min-height:100vh;
+    padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+  .hidden{display:none!important}
+  .wrap{max-width:520px;margin:0 auto;padding:18px 16px 40px}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  h1{font-size:20px;letter-spacing:.5px}
+  h2{font-size:14px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;
+    margin:0 0 10px;font-weight:600}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:16px;margin-bottom:14px}
+  label{display:block;font-size:13px;color:var(--muted);margin:0 0 5px}
+  input,select{width:100%;background:var(--panel2);border:1px solid var(--line);
+    color:var(--txt);border-radius:10px;padding:12px;font-size:15px;margin-bottom:12px}
+  input:focus,select:focus{outline:none;border-color:var(--blue)}
+  .btn{width:100%;border:none;border-radius:10px;padding:13px;font-size:15px;
+    font-weight:600;cursor:pointer;color:#0d0f12;background:var(--amber)}
+  .btn.sec{background:var(--panel2);color:var(--txt);border:1px solid var(--line)}
+  .btn.green{background:var(--green);color:#04130c}
+  .btn.red{background:var(--red);color:#fff}
+  .btn:active{transform:scale(.98)}
+  .btn:disabled{opacity:.5;cursor:default}
+  .row{display:flex;gap:10px}
+  .row>*{flex:1}
+  .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+  .badge{font-size:12px;font-weight:700;padding:5px 11px;border-radius:999px;
+    text-transform:uppercase;letter-spacing:1px}
+  .b-open{background:rgba(46,194,126,.15);color:var(--green)}
+  .b-closed{background:rgba(229,72,77,.15);color:var(--red)}
+  .b-unknown{background:rgba(138,150,166,.15);color:var(--muted)}
+  .gatebtn{width:100%;padding:40px 16px;border:none;border-radius:18px;cursor:pointer;
+    background:linear-gradient(145deg,#1f2731,#171c23);border:1px solid var(--line);
+    color:var(--txt);font-size:22px;font-weight:700;letter-spacing:2px;
+    box-shadow:0 8px 30px rgba(0,0,0,.4)}
+  .gatebtn:active{transform:scale(.985)}
+  .gatebtn .ic{font-size:46px;display:block;margin-bottom:10px}
+  .gatebtn.busy{opacity:.6;pointer-events:none}
+  .muted{color:var(--muted);font-size:13px}
+  .logitem{display:flex;justify-content:space-between;padding:9px 0;
+    border-bottom:1px solid var(--line);font-size:13px}
+  .logitem:last-child{border-bottom:none}
+  .userrow{padding:12px 0;border-bottom:1px solid var(--line)}
+  .userrow:last-child{border-bottom:none}
+  .userrow .nm{font-weight:600;font-size:14px}
+  .userrow .em{font-size:12px;color:var(--muted);margin-bottom:8px}
+  .pill{font-size:11px;padding:2px 8px;border-radius:999px;font-weight:700}
+  .pill.pend{background:rgba(255,176,46,.15);color:var(--amber)}
+  .pill.adm{background:rgba(68,147,248,.15);color:var(--blue)}
+  .err{color:var(--red);font-size:13px;margin-bottom:10px;min-height:16px}
+  .ok{color:var(--green);font-size:13px;margin-bottom:10px;min-height:16px}
+  .center{text-align:center;padding:60px 20px}
+  .switch{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .small{padding:8px;font-size:13px}
+  a.link{color:var(--blue);cursor:pointer;text-decoration:none}
+</style>
+</head>
+<body>
+
+<div id="loading" class="center"><div class="muted">Loading GateOS…</div></div>
+
+<!-- AUTH -->
+<div id="authScreen" class="wrap hidden">
+  <div class="center" style="padding:30px 0 18px">
+    <h1>⛩ GateOS</h1>
+    <p class="muted" style="margin-top:6px">Gate Control</p>
+  </div>
+  <div class="card">
+    <div id="authErr" class="err"></div>
+    <div id="loginBox">
+      <label>Email</label><input id="liEmail" type="email" autocomplete="email">
+      <label>Password</label><input id="liPass" type="password" autocomplete="current-password">
+      <button class="btn" id="loginBtn">Sign In</button>
+      <p class="muted" style="text-align:center;margin-top:14px">
+        New user? <a class="link" id="toReg">Request access</a></p>
+    </div>
+    <div id="regBox" class="hidden">
+      <label>Full name</label><input id="rgName" type="text">
+      <label>Email</label><input id="rgEmail" type="email">
+      <label>Password (min 6 chars)</label><input id="rgPass" type="password">
+      <button class="btn" id="regBtn">Request Access</button>
+      <p class="muted" style="text-align:center;margin-top:14px">
+        Have an account? <a class="link" id="toLogin">Sign in</a></p>
+    </div>
+  </div>
+</div>
+
+<!-- PENDING -->
+<div id="pendingScreen" class="wrap hidden">
+  <div class="center">
+    <h1>⏳</h1>
+    <h1 style="margin-top:10px">Awaiting Approval</h1>
+    <p class="muted" style="margin-top:12px">Your access request was received.<br>
+      An admin needs to approve your account.</p>
+    <button class="btn sec" id="pendLogout" style="margin-top:24px">Sign Out</button>
+  </div>
+</div>
+
+<!-- EXPIRED -->
+<div id="expiredScreen" class="wrap hidden">
+  <div class="center">
+    <h1>🔒</h1>
+    <h1 style="margin-top:10px">Access Expired</h1>
+    <p class="muted" style="margin-top:12px">Your access has expired.<br>
+      Contact the admin to renew.</p>
+    <button class="btn sec" id="expLogout" style="margin-top:24px">Sign Out</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="appScreen" class="wrap hidden">
+  <div class="top">
+    <div>
+      <h1 id="gateName">Gate 1</h1>
+      <div class="muted mono" id="whoami" style="font-size:12px;margin-top:3px"></div>
+    </div>
+    <span id="statusBadge" class="badge b-unknown">Unknown</span>
+  </div>
+
+  <button class="gatebtn" id="gateBtn">
+    <span class="ic">⛩</span>
+    <span id="gateBtnLabel">OPEN / CLOSE</span>
+  </button>
+  <div class="muted" id="lastUpdated" style="text-align:center;margin:12px 0 18px"></div>
+
+  <div class="card">
+    <h2>Sync State</h2>
+    <p class="muted" style="margin-bottom:12px">Set the displayed status after you visually confirm the gate.</p>
+    <div class="row">
+      <button class="btn green small" id="markOpen">Mark Open</button>
+      <button class="btn red small" id="markClosed">Mark Closed</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Auto-open on Arrival</h2>
+    <div class="switch">
+      <span class="muted" id="geoStatus">Geofence off</span>
+      <label style="width:auto;margin:0">
+        <input type="checkbox" id="geoToggle" style="width:auto;margin:0">
+      </label>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Recent Activity</h2>
+    <div id="logList"><div class="muted">No activity yet.</div></div>
+  </div>
+
+  <!-- ADMIN -->
+  <div id="adminPanel" class="card hidden">
+    <h2>Admin — Users</h2>
+    <div id="userList"><div class="muted">Loading users…</div></div>
+    <hr style="border:none;border-top:1px solid var(--line);margin:16px 0">
+    <h2>Home Location (geofence)</h2>
+    <div class="muted" id="homeLocLabel" style="margin-bottom:10px">Not set</div>
+    <label>Radius (meters)</label>
+    <input id="geoRadius" type="number" value="80" min="20" max="500">
+    <button class="btn sec" id="setHomeBtn">Set Home to My Current Location</button>
+  </div>
+
+  <button class="btn sec" id="logoutBtn" style="margin-top:8px">Sign Out</button>
+  <p class="muted mono" style="text-align:center;margin-top:14px;font-size:11px">GateOS v1 · gateos-home</p>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword,
+  createUserWithEmailAndPassword, signOut }
+  from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc, updateDoc, deleteDoc, collection,
+  addDoc, onSnapshot, query, orderBy, limit, serverTimestamp, Timestamp }
+  from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCNjWcrKW4ALlvaGKU0_8_EGBJSDeRfSSg",
+  authDomain: "gateos-home.firebaseapp.com",
+  projectId: "gateos-home",
+  storageBucket: "gateos-home.firebasestorage.app",
+  messagingSenderId: "1079106669234",
+  appId: "1:1079106669234:web:8db9cc163edf6be2dd97ab"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const GATE = "gate1";
+
+// ---- element helpers ----
+const $ = (id) => document.getElementById(id);
+const screens = ["loading","authScreen","pendingScreen","expiredScreen","appScreen"];
+const show = (id) => screens.forEach(s => $(s).classList.toggle("hidden", s !== id));
+
+// ---- state ----
+let user = null, profile = null;
+let profileUnsub=null, gateUnsub=null, logUnsub=null, usersUnsub=null, configUnsub=null;
+let pendingName = "";
+let homeGeo = null;          // {lat,lng,radius}
+let geoWatchId = null;
+let geoArmed = true;         // re-arm logic for auto-open
+
+// ---- AUTH UI toggles ----
+$("toReg").onclick = () => { $("loginBox").classList.add("hidden");
+  $("regBox").classList.remove("hidden"); $("authErr").textContent=""; };
+$("toLogin").onclick = () => { $("regBox").classList.add("hidden");
+  $("loginBox").classList.remove("hidden"); $("authErr").textContent=""; };
+
+$("loginBtn").onclick = async () => {
+  $("authErr").textContent = "";
+  try {
+    await signInWithEmailAndPassword(auth, $("liEmail").value.trim(), $("liPass").value);
+  } catch (e) { $("authErr").textContent = humanError(e); }
+};
+
+$("regBtn").onclick = async () => {
+  $("authErr").textContent = "";
+  pendingName = $("rgName").value.trim();
+  if (!pendingName) { $("authErr").textContent = "Enter your name."; return; }
+  try {
+    await createUserWithEmailAndPassword(auth, $("rgEmail").value.trim(), $("rgPass").value);
+    // profile doc gets created in onAuthStateChanged when none exists
+  } catch (e) { $("authErr").textContent = humanError(e); }
+};
+
+const doLogout = () => signOut(auth);
+$("logoutBtn").onclick = doLogout;
+$("pendLogout").onclick = doLogout;
+$("expLogout").onclick = doLogout;
+
+function humanError(e){
+  const m = (e && e.code) ? e.code : String(e);
+  if (m.includes("invalid-credential") || m.includes("wrong-password") || m.includes("user-not-found"))
+    return "Wrong email or password.";
+  if (m.includes("email-already-in-use")) return "Email already registered. Sign in instead.";
+  if (m.includes("weak-password")) return "Password too short (min 6 characters).";
+  if (m.includes("invalid-email")) return "Invalid email address.";
+  if (m.includes("network")) return "Network error. Check connection.";
+  return "Error: " + m;
+}
+
+// ---- AUTH STATE ----
+onAuthStateChanged(auth, (u) => {
+  cleanupSubs();
+  user = u;
+  if (!u) { profile = null; show("authScreen"); return; }
+  show("loading");
+  profileUnsub = onSnapshot(doc(db,"users",u.uid), async (snap) => {
+    if (!snap.exists()) {
+      try {
+        await setDoc(doc(db,"users",u.uid), {
+          email: u.email,
+          name: pendingName || (u.email ? u.email.split("@")[0] : "User"),
+          role: "user", active: false, createdAt: serverTimestamp()
+        });
+      } catch(e){ console.error("provision failed", e); }
+      return; // snapshot will re-fire with the new doc
+    }
+    profile = snap.data();
+    routeUser();
+  }, (e) => console.error("profile sub error", e));
+});
+
+function routeUser(){
+  // expiry check
+  if (profile.expiresAt && profile.expiresAt.toMillis &&
+      profile.expiresAt.toMillis() < Date.now()) { show("expiredScreen"); return; }
+  if (!profile.active) { show("pendingScreen"); return; }
+  enterApp();
+}
+
+function cleanupSubs(){
+  [profileUnsub,gateUnsub,logUnsub,usersUnsub,configUnsub].forEach(f=>{ if(f) f(); });
+  profileUnsub=gateUnsub=logUnsub=usersUnsub=configUnsub=null;
+  stopGeo();
+}
+
+// ---- APP ----
+function enterApp(){
+  show("appScreen");
+  $("whoami").textContent = profile.name + (profile.role==="admin" ? " · admin" : "");
+  subscribeGate();
+  subscribeLog();
+  subscribeConfig();
+  if (profile.role === "admin"){ $("adminPanel").classList.remove("hidden"); subscribeUsers(); }
+  else { $("adminPanel").classList.add("hidden"); }
+  initGeoToggle();
+}
+
+function subscribeGate(){
+  gateUnsub = onSnapshot(doc(db,"gates",GATE), (snap)=>{
+    const d = snap.exists()? snap.data() : {};
+    $("gateName").textContent = d.name || "Gate 1";
+    const st = d.status || "unknown";
+    const badge = $("statusBadge");
+    badge.className = "badge " + (st==="open"?"b-open":st==="closed"?"b-closed":"b-unknown");
+    badge.textContent = st;
+    if (d.lastUpdated && d.lastUpdated.toDate){
+      $("lastUpdated").textContent = "Updated " + timeAgo(d.lastUpdated.toDate());
+    } else { $("lastUpdated").textContent = ""; }
+  });
+}
+
+function subscribeLog(){
+  const q = query(collection(db,"accessLog"), orderBy("ts","desc"), limit(15));
+  logUnsub = onSnapshot(q, (qs)=>{
+    if (qs.empty){ $("logList").innerHTML = '<div class="muted">No activity yet.</div>'; return; }
+    let html = "";
+    qs.forEach(docSnap=>{
+      const d = docSnap.data();
+      const when = (d.ts && d.ts.toDate)? timeAgo(d.ts.toDate()) : "…";
+      html += `<div class="logitem"><span>${esc(d.name||"?")} · ${esc(d.action||"")}</span>`
+            + `<span class="muted">${when}</span></div>`;
+    });
+    $("logList").innerHTML = html;
+  }, (e)=>{ console.error("log sub", e); });
+}
+
+function subscribeConfig(){
+  configUnsub = onSnapshot(doc(db,"config",GATE), (snap)=>{
+    homeGeo = snap.exists()? (snap.data().geo || null) : null;
+    if (profile && profile.role==="admin"){
+      $("homeLocLabel").textContent = homeGeo
+        ? `Set: ${homeGeo.lat.toFixed(5)}, ${homeGeo.lng.toFixed(5)} (r=${homeGeo.radius}m)`
+        : "Not set";
+      if (homeGeo && homeGeo.radius) $("geoRadius").value = homeGeo.radius;
+    }
+  });
+}
+
+function subscribeUsers(){
+  usersUnsub = onSnapshot(collection(db,"users"), (qs)=>{
+    let html = "";
+    qs.forEach(docSnap=>{
+      const id = docSnap.id, d = docSnap.data();
+      const isSelf = id === user.uid;
+      const expVal = (d.expiresAt && d.expiresAt.toDate)
+        ? d.expiresAt.toDate().toISOString().slice(0,10) : "";
+      html += `<div class="userrow" data-uid="${id}">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div><div class="nm">${esc(d.name||"?")}
+            ${d.role==="admin"?'<span class="pill adm">admin</span>':""}
+            ${!d.active?'<span class="pill pend">pending</span>':""}</div>
+            <div class="em">${esc(d.email||"")}</div></div>
+        </div>
+        <div class="row" style="margin-top:4px">
+          <select class="small u-role">
+            <option value="user"${d.role!=="admin"?" selected":""}>user</option>
+            <option value="admin"${d.role==="admin"?" selected":""}>admin</option>
+          </select>
+          <button class="btn ${d.active?'sec':'green'} small u-active">${d.active?"Active ✓":"Activate"}</button>
+        </div>
+        <label style="margin-top:8px">Access expires (blank = never)</label>
+        <input type="date" class="u-exp" value="${expVal}">
+        <div class="row">
+          <button class="btn sec small u-save">Save</button>
+          ${isSelf?"":'<button class="btn red small u-del">Remove</button>'}
+        </div>
+      </div>`;
+    });
+    $("userList").innerHTML = html || '<div class="muted">No users.</div>';
+    wireUserRows();
+  }, (e)=>{ console.error("users sub", e); });
+}
+
+function wireUserRows(){
+  document.querySelectorAll("#userList .userrow").forEach(row=>{
+    const uid = row.dataset.uid;
+    row.querySelector(".u-active").onclick = async (ev)=>{
+      const makeActive = ev.target.textContent.indexOf("Activate")>=0;
+      await updateDoc(doc(db,"users",uid), { active: makeActive });
+    };
+    row.querySelector(".u-save").onclick = async ()=>{
+      const role = row.querySelector(".u-role").value;
+      const expStr = row.querySelector(".u-exp").value;
+      const patch = { role };
+      patch.expiresAt = expStr ? Timestamp.fromDate(new Date(expStr+"T23:59:59")) : null;
+      await updateDoc(doc(db,"users",uid), patch);
+    };
+    const del = row.querySelector(".u-del");
+    if (del) del.onclick = async ()=>{
+      if (confirm("Remove this user's access record?")) await deleteDoc(doc(db,"users",uid));
+    };
+  });
+}
+
+// ---- GATE TRIGGER ----
+$("gateBtn").onclick = () => triggerGate("manual");
+
+async function triggerGate(source){
+  const btn = $("gateBtn");
+  if (btn.classList.contains("busy")) return;
+  btn.classList.add("busy");
+  $("gateBtnLabel").textContent = "TRIGGERING…";
+  try {
+    await setDoc(doc(db,"commands",GATE), {
+      action: "toggle", ts: serverTimestamp(),
+      by: user.uid, byName: profile.name, source, processed: false
+    });
+    await addDoc(collection(db,"accessLog"), {
+      uid: user.uid, name: profile.name, action: "toggle (" + source + ")", ts: serverTimestamp()
+    });
+    $("gateBtnLabel").textContent = "SENT ✓";
+  } catch(e){
+    console.error(e);
+    $("gateBtnLabel").textContent = "FAILED";
+  }
+  setTimeout(()=>{ $("gateBtnLabel").textContent = "OPEN / CLOSE"; btn.classList.remove("busy"); }, 2500);
+}
+
+// ---- SYNC STATE ----
+$("markOpen").onclick = ()=> setStatus("open");
+$("markClosed").onclick = ()=> setStatus("closed");
+async function setStatus(st){
+  try { await updateDoc(doc(db,"gates",GATE), { status: st, lastUpdated: serverTimestamp() }); }
+  catch(e){ console.error(e); alert("Could not update status."); }
+}
+
+// ---- ADMIN: set home location ----
+$("setHomeBtn").onclick = ()=>{
+  if (!navigator.geolocation){ alert("Geolocation not supported."); return; }
+  $("setHomeBtn").textContent = "Getting location…";
+  navigator.geolocation.getCurrentPosition(async (pos)=>{
+    const radius = parseInt($("geoRadius").value,10) || 80;
+    try {
+      await setDoc(doc(db,"config",GATE), {
+        geo: { lat: pos.coords.latitude, lng: pos.coords.longitude, radius }
+      }, { merge:true });
+      $("setHomeBtn").textContent = "Saved ✓";
+    } catch(e){ console.error(e); $("setHomeBtn").textContent = "Failed"; }
+    setTimeout(()=> $("setHomeBtn").textContent = "Set Home to My Current Location", 2000);
+  }, (err)=>{
+    $("setHomeBtn").textContent = "Set Home to My Current Location";
+    alert("Location error: " + err.message);
+  }, { enableHighAccuracy:true, timeout:10000 });
+};
+
+// ---- GEOFENCE auto-open (foreground) ----
+function initGeoToggle(){
+  const on = localStorage.getItem("gateos_autoopen") === "1";
+  $("geoToggle").checked = on;
+  $("geoToggle").onchange = ()=>{
+    if ($("geoToggle").checked){ localStorage.setItem("gateos_autoopen","1"); startGeo(); }
+    else { localStorage.removeItem("gateos_autoopen"); stopGeo(); }
+  };
+  if (on) startGeo();
+}
+
+function startGeo(){
+  if (!navigator.geolocation){ $("geoStatus").textContent = "Geolocation unavailable"; return; }
+  if (geoWatchId !== null) return;
+  $("geoStatus").textContent = "Watching location…";
+  geoArmed = true;
+  geoWatchId = navigator.geolocation.watchPosition((pos)=>{
+    if (!homeGeo){ $("geoStatus").textContent = "Home location not set by admin"; return; }
+    const dist = haversine(pos.coords.latitude, pos.coords.longitude, homeGeo.lat, homeGeo.lng);
+    const r = homeGeo.radius || 80;
+    $("geoStatus").textContent = `${Math.round(dist)}m from gate` + (geoArmed?" · armed":" · triggered");
+    if (dist <= r && geoArmed){
+      geoArmed = false;
+      triggerGate("geofence");
+    } else if (dist > r * 1.8){
+      geoArmed = true; // re-arm once you leave the area
+    }
+  }, (err)=>{ $("geoStatus").textContent = "Geo error: " + err.message; },
+     { enableHighAccuracy:true, maximumAge:5000, timeout:15000 });
+}
+
+function stopGeo(){
+  if (geoWatchId !== null){ navigator.geolocation.clearWatch(geoWatchId); geoWatchId = null; }
+  $("geoStatus").textContent = "Geofence off";
+}
+
+// ---- utils ----
+function haversine(lat1,lon1,lat2,lon2){
+  const R=6371000, toR=x=>x*Math.PI/180;
+  const dLat=toR(lat2-lat1), dLon=toR(lon2-lon1);
+  const a=Math.sin(dLat/2)**2 + Math.cos(toR(lat1))*Math.cos(toR(lat2))*Math.sin(dLon/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+function timeAgo(d){
+  const s=Math.floor((Date.now()-d.getTime())/1000);
+  if (s<60) return s+"s ago";
+  if (s<3600) return Math.floor(s/60)+"m ago";
+  if (s<86400) return Math.floor(s/3600)+"h ago";
+  return Math.floor(s/86400)+"d ago";
+}
+function esc(s){ return String(s).replace(/[&<>"']/g, c=>(
+  {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+</script>
+</body>
+</html>
